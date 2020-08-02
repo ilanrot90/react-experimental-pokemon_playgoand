@@ -1,10 +1,16 @@
-import React, { Suspense, useState, unstable_useTransition } from "react";
+import React, {
+  Suspense,
+  useState,
+  unstable_useTransition,
+  useEffect
+} from "react";
 import "./styles.css";
-import { ReactQueryConfigProvider, useQuery } from "react-query";
+import { ReactQueryConfigProvider, useQuery, queryCache } from "react-query";
 import axios, { CancelToken } from "axios";
+import { ReactQueryDevtools } from "react-query-devtools";
 
 const Item = ({ id }) => {
-  const { data } = useQuery(
+  const { data, isIdle } = useQuery(
     ["pokemon", { id }],
     async (key, { id }) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -17,14 +23,40 @@ const Item = ({ id }) => {
       onSuccess: data => {
         console.log(data);
       },
+      // condition if true query will run
+      enabled: id,
+      // set time of fresh query
+      staleTime: 1000 * 60 * 5,
+      // time the query saved in cache
+      cacheTime: Infinity,
+      // refetch query on re-focus
+      refetchOnWindowFocus: false,
+      /* set initial data
+      initialStale: true,
+      initialData: {
+        sprites: {
+          front_default:
+            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/8.png"
+        }
+      },
+*/
+      // refetch interval
+      refetchInterval: 1000 * 60,
+      // refetch on backgroand
+      refetchIntervalInBackground: false,
+      // retry times
+      retry: 3,
+      // retry delay between each retry - max 30s
+      retryDelay: idx => Math.min(1000 * 2 ** idx, 30000),
+      // use suspense
       suspense: true
     }
   );
 
-  return (
+  console.log("queryCache: ", queryCache.getQueryData("pokemons"));
+  return isIdle ? null : (
     <div style={{ width: 300, height: 250 }} className="img-container">
       <img src={data.sprites.front_default} alt={data.name} />
-      {/* {data.base_experience} */}
     </div>
   );
 };
@@ -33,8 +65,24 @@ const List = () => {
   const [startTransition, isPending] = unstable_useTransition({
     timeoutMs: 10000
   });
-  const { data } = useQuery(
-    "fetch",
+  // prefetch data before it mounts to screen
+  useEffect(() => {
+    queryCache.prefetchQuery(
+      ["pokemon", { id: "bulbasaur" }],
+      async () => {
+        const { data } = await axios.get(
+          `https://pokeapi.co/api/v2/pokemon/bulbasaur`
+        );
+        return data;
+      },
+      {
+        staleTime: 1000 * 60 * 5
+      }
+    );
+  }, []);
+
+  const { data, isFetching } = useQuery(
+    "pokemons",
     async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       const source = CancelToken.source();
@@ -50,8 +98,11 @@ const List = () => {
 
   return (
     <ul className="list">
+      {isFetching && "..."}
       {isPending && "pending"}
-      <Suspense fallback={"loading=Item"}>{id && <Item id={id} />}</Suspense>
+      <Suspense fallback={"loading=Item"}>
+        <Item id={id} />
+      </Suspense>
 
       {data.results.map(item => (
         <li
@@ -81,9 +132,22 @@ export default function App() {
     <ReactQueryConfigProvider config={queryConfig}>
       <div className="App">
         <h1>Hello CodeSandbox</h1>
-        <button onClick={() => setShow(prev => !prev)}>show list</button>
+        <div style={{ display: "flex" }}>
+          <button onClick={() => setShow(prev => !prev)}>show list</button>
+          <button
+            onClick={() =>
+              queryCache.invalidateQueries("pokemons", {
+                // on click query will refetch even if its not in the dom
+                refetchInactive: true
+              })
+            }
+          >
+            refetch list
+          </button>
+        </div>
         <Suspense fallback={<Loader />}>{show && <List />}</Suspense>
       </div>
+      <ReactQueryDevtools />
     </ReactQueryConfigProvider>
   );
 }

@@ -12,6 +12,7 @@
     "react": "experimental",
     "react-dom": "experimental",
     "react-query": "2.5.10",
+    "react-query-devtools": "2.4.2",
     "react-scripts": "3.4.1"
   },
   "devDependencies": {
