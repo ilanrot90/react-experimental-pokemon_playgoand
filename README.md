@@ -1,2 +1,2 @@
 # react-experimental-pokemon_playgoand
-Created with CodeSandbox
+__expiriment next react version suspense with react query __
