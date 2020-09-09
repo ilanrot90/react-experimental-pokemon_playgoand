@@ -31,7 +31,7 @@ const Item = ({ id }) => {
       cacheTime: Infinity,
       // refetch query on re-focus
       refetchOnWindowFocus: false,
-      /* set initial data
+      /* set initial data - first time enter the component it will refetch again
       initialStale: true,
       initialData: {
         sprites: {
