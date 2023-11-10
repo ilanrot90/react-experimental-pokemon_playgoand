@@ -8,7 +8,7 @@
   ],
   "main": "src/index.js",
   "dependencies": {
-    "axios": "0.19.2",
+    "axios": "1.6.0",
     "react": "experimental",
     "react-dom": "experimental",
     "react-query": "2.5.10",
